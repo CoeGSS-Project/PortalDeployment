@@ -1,0 +1,173 @@
+-- MySQL dump 10.13  Distrib 5.5.49, for debian-linux-gnu (x86_64)
+--
+-- Host: localhost    Database: moodle
+-- ------------------------------------------------------
+-- Server version	5.5.49-0ubuntu0.14.04.1
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `mdl_config_plugins`
+--
+
+-- DROP TABLE IF EXISTS `mdl_config_plugins`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+-- CREATE TABLE `mdl_config_plugins` (
+--   `id` bigint(10) NOT NULL AUTO_INCREMENT,
+--   `plugin` varchar(100) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'core',
+--   `name` varchar(100) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+--   `value` longtext COLLATE utf8_unicode_ci NOT NULL,
+--   PRIMARY KEY (`id`),
+--   UNIQUE KEY `mdl_confplug_plunam_uix` (`plugin`,`name`)
+-- ) ENGINE=InnoDB AUTO_INCREMENT=1261 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Moodle modules and plugins configuration variables';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `mdl_config_plugins`
+--
+-- WHERE:  plugin='auth/ldap'
+
+LOCK TABLES `mdl_config` WRITE;
+/*!40000 ALTER TABLE `mdl_config` DISABLE KEYS */;
+
+DELETE FROM `mdl_config` WHERE `name`='auth';
+INSERT INTO `mdl_config` (`name`, `value`) VALUES ('auth', 'ldap,email');
+
+/*!40000 ALTER TABLE `mdl_config` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `mdl_config_plugins` WRITE;
+/*!40000 ALTER TABLE `mdl_config_plugins` DISABLE KEYS */;
+
+DELETE FROM `mdl_config_plugins` WHERE `plugin`='auth/ldap';
+
+INSERT INTO `mdl_config_plugins` (`plugin`, `name`, `value`) VALUES
+		('auth/ldap','auth_user_create','0'),
+		('auth/ldap','bind_dn','{{moodle_ldap_bind_dn}}'),
+		('auth/ldap','bind_pw','{{moodle_ldap_bind_pw}}'),
+		('auth/ldap','changepasswordurl',''),
+		('auth/ldap','contexts','{{moodle_ldap_contexts}}'),
+		('auth/ldap','create_context',''),
+		('auth/ldap','creators',''),
+		('auth/ldap','expiration','0'),
+		('auth/ldap','expiration_warning','10'),
+		('auth/ldap','expireattr',''),
+		('auth/ldap','field_lock_address','unlocked'),
+		('auth/ldap','field_lock_alternatename','unlocked'),
+		('auth/ldap','field_lock_city','unlocked'),
+		('auth/ldap','field_lock_country','unlocked'),
+		('auth/ldap','field_lock_department','unlocked'),
+		('auth/ldap','field_lock_description','unlocked'),
+		('auth/ldap','field_lock_email','unlocked'),
+		('auth/ldap','field_lock_firstname','unlocked'),
+		('auth/ldap','field_lock_firstnamephonetic','unlocked'),
+		('auth/ldap','field_lock_idnumber','unlocked'),
+		('auth/ldap','field_lock_institution','unlocked'),
+		('auth/ldap','field_lock_lang','unlocked'),
+		('auth/ldap','field_lock_lastname','unlocked'),
+		('auth/ldap','field_lock_lastnamephonetic','unlocked'),
+		('auth/ldap','field_lock_middlename','unlocked'),
+		('auth/ldap','field_lock_phone1','unlocked'),
+		('auth/ldap','field_lock_phone2','unlocked'),
+		('auth/ldap','field_lock_url','unlocked'),
+		('auth/ldap','field_map_address',''),
+		('auth/ldap','field_map_alternatename',''),
+		('auth/ldap','field_map_city',''),
+		('auth/ldap','field_map_country',''),
+		('auth/ldap','field_map_department',''),
+		('auth/ldap','field_map_description',''),
+		('auth/ldap','field_map_email',''),
+		('auth/ldap','field_map_firstname',''),
+		('auth/ldap','field_map_firstnamephonetic',''),
+		('auth/ldap','field_map_idnumber',''),
+		('auth/ldap','field_map_institution',''),
+		('auth/ldap','field_map_lang',''),
+		('auth/ldap','field_map_lastname',''),
+		('auth/ldap','field_map_lastnamephonetic',''),
+		('auth/ldap','field_map_middlename',''),
+		('auth/ldap','field_map_phone1',''),
+		('auth/ldap','field_map_phone2',''),
+		('auth/ldap','field_map_url',''),
+		('auth/ldap','field_updatelocal_address','oncreate'),
+		('auth/ldap','field_updatelocal_alternatename','oncreate'),
+		('auth/ldap','field_updatelocal_city','oncreate'),
+		('auth/ldap','field_updatelocal_country','oncreate'),
+		('auth/ldap','field_updatelocal_department','oncreate'),
+		('auth/ldap','field_updatelocal_description','oncreate'),
+		('auth/ldap','field_updatelocal_email','oncreate'),
+		('auth/ldap','field_updatelocal_firstname','oncreate'),
+		('auth/ldap','field_updatelocal_firstnamephonetic','oncreate'),
+		('auth/ldap','field_updatelocal_idnumber','oncreate'),
+		('auth/ldap','field_updatelocal_institution','oncreate'),
+		('auth/ldap','field_updatelocal_lang','oncreate'),
+		('auth/ldap','field_updatelocal_lastname','oncreate'),
+		('auth/ldap','field_updatelocal_lastnamephonetic','oncreate'),
+		('auth/ldap','field_updatelocal_middlename','oncreate'),
+		('auth/ldap','field_updatelocal_phone1','oncreate'),
+		('auth/ldap','field_updatelocal_phone2','oncreate'),
+		('auth/ldap','field_updatelocal_url','oncreate'),
+		('auth/ldap','field_updateremote_address','0'),
+		('auth/ldap','field_updateremote_alternatename','0'),
+		('auth/ldap','field_updateremote_city','0'),
+		('auth/ldap','field_updateremote_country','0'),
+		('auth/ldap','field_updateremote_department','0'),
+		('auth/ldap','field_updateremote_description','0'),
+		('auth/ldap','field_updateremote_email','0'),
+		('auth/ldap','field_updateremote_firstname','0'),
+		('auth/ldap','field_updateremote_firstnamephonetic','0'),
+		('auth/ldap','field_updateremote_idnumber','0'),
+		('auth/ldap','field_updateremote_institution','0'),
+		('auth/ldap','field_updateremote_lang','0'),
+		('auth/ldap','field_updateremote_lastname','0'),
+		('auth/ldap','field_updateremote_lastnamephonetic','0'),
+		('auth/ldap','field_updateremote_middlename','0'),
+		('auth/ldap','field_updateremote_phone1','0'),
+		('auth/ldap','field_updateremote_phone2','0'),
+		('auth/ldap','field_updateremote_url','0'),
+		('auth/ldap','forcechangepassword','0'),
+		('auth/ldap','graceattr',''),
+		('auth/ldap','gracelogins','0'),
+		('auth/ldap','host_url','{{moodle_ldap_host_url}}'),
+		('auth/ldap','ldap_version','3'),
+		('auth/ldap','ldapencoding','utf-8'),
+		('auth/ldap','memberattribute',''),
+		('auth/ldap','memberattribute_isdn',''),
+		('auth/ldap','ntlmsso_enabled','0'),
+		('auth/ldap','ntlmsso_ie_fastpath','0'),
+		('auth/ldap','ntlmsso_remoteuserformat',''),
+		('auth/ldap','ntlmsso_subnet',''),
+		('auth/ldap','ntlmsso_type','ntlm'),
+		('auth/ldap','objectclass',''),
+		('auth/ldap','opt_deref','0'),
+		('auth/ldap','pagesize','250'),
+		('auth/ldap','passtype','plaintext'),
+		('auth/ldap','preventpassindb','1'),
+		('auth/ldap','removeuser','0'),
+		('auth/ldap','search_sub','0'),
+		('auth/ldap','start_tls','0'),
+		('auth/ldap','stdchangepassword','0'),
+		('auth/ldap','user_attribute',''),
+		('auth/ldap','user_type','rfc2307');
+/*!40000 ALTER TABLE `mdl_config_plugins` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2017-06-13  9:26:28

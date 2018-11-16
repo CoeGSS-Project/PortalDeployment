@@ -1,0 +1,27 @@
+---
+  internal_interface: ens3
+  EXTERNAL_interface: ens11
+  vms_all: # Full list of VMs
+    - { host: services, vmname: ShibbolethIDP,  vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_default.img", defaultUser: "hpcadmin" }
+    - { host: services, vmname: IDM,            vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_default.img", defaultUser: "hpcadmin" }
+    # - { host: services, vmname: Cloudify,       vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_default.img", defaultUser: "hpcadmin" }
+    - { host: services, vmname: Cloudify2,       vmCPUs: 4,  vmRAM: 8388608, baseOS: "centos", baseImage: "centos7-server-CoeGSS.img", defaultUser: "centos" }
+    - { host: services, vmname: test-vm1,       vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_jun18.img", defaultUser: "hpcadmin" }
+    - { host: services, vmname: moodle-dev,     vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_default.img", defaultUser: "hpcadmin" }
+    - { host: services, vmname: ckan-dev,       vmCPUs: 2,  vmRAM: 2097152, baseOS: "xenial", baseImage: "xenial-server-CoeGSS-amd64_jun18.img",   defaultUser: "hpcadmin" }
+    - { host: services, vmname: test-vm2,       vmCPUs: 4,  vmRAM: 8388608, baseOS: "centos", baseImage: "centos7-server-CoeGSS.img", defaultUser: "centos" }
+
+  
+  vms: # These VMs will be deleted/created
+      []
+
+
+
+    # Ram map for copy and paste
+    #  1 GB =  1048576
+    #  2 GB =  2097152
+    #  4 GB =  4194304
+    #  8 GB =  8388608
+    # 16 GB = 16777216
+    # 32 GB = 33554432
+

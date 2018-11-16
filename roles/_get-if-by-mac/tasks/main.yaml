@@ -1,0 +1,18 @@
+---
+  - name: Looking for interface name connected to br0
+    set_fact: 
+      br0_if_dev: "{{item}}"
+    when: "{{ (hostvars[inventory_hostname]['ansible_'~item]['macaddress'] |default('no mac')) == hostvars[inventory_hostname]['br0_mac'] }}"
+    with_items:
+      - "{{ ansible_interfaces | map('replace', '-','_') | list }}"
+
+  - debug: var=br0_if_dev
+
+  - name: Looking for interface name connected to br1
+    set_fact: 
+      br1_if_dev: "{{item}}"
+    when: "{{ (hostvars[inventory_hostname]['ansible_'~item]['macaddress'] |default('no mac')) == hostvars[inventory_hostname]['br1_mac'] }}"
+    with_items:
+      - "{{ ansible_interfaces | map('replace', '-','_') | list }}"
+
+  - debug: var=br1_if_dev

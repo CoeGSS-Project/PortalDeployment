@@ -1,0 +1,36 @@
+--- 
+- name: Installing required packages
+  yum: name={{item}} state=present
+  with_items:
+   - wget 
+   #- openssl-1.0.2k 
+   #- openssh-server 
+   #- logrotate systemd-sysv 
+   #- initscripts 
+   #- which 
+   - python-setuptools 
+   - python-backports-ssl_match_hostname 
+   - python-backports
+   
+# Installing Cloudify CLI and Cloudify Manager
+- name: Installing Cloudify CLI
+  yum:
+    name: '{{ repo_cli_url }}'
+    state: present
+
+- name: Installing Cloudify Manager
+  yum:
+    name: '{{ repo_cloudify_manager_url }}'
+    state: present
+
+# Install Cloudify Manager 
+#cfy_manager install --private-ip 172.18.10.61 --public-ip 172.18.10.61 --admin-password admin
+- name: running cfy_manager
+  command: cfy_manager install --private-ip '{{ vm_private_ip }}' --public-ip '{{ vm_public_ip }}' --admin-password '{{ admin_password }}'
+  
+
+- name: insert a line to hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: '{{ vm_public_ip }}   {{ server_name }}'
+   # insertafter: .*{{ vm_name }}

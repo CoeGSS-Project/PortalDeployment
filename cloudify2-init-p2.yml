@@ -1,0 +1,11 @@
+---
+  - hosts: CoeGSS_Cloudify2
+    vars:
+      ansible_python_interpreter: python
+      ansible_become: True
+    roles:
+      - { role: userConfig,   users: [
+            { userName: 'mpalka', sudo: False} 
+          ]}
+      # - nagios
+

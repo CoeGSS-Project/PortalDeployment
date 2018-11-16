@@ -1,0 +1,36 @@
+---
+- name: Upgrade system
+  apt: upgrade=dist update_cache=yes
+
+- name: Install nagios and plugins
+  apt:
+    name: "{{item}}"
+    state: "latest"
+  with_items:
+    - nagios-nrpe-server
+    - nagios-plugins
+    - nagios-plugins-basic
+    - nagios-plugins-common
+    - nagios-plugins-standard
+
+- name: Configuring allowed hosts for nrpe
+  lineinfile:
+    path: /etc/nagios/nrpe.cfg
+    regexp: 'allowed_hosts='
+    line: 'allowed_hosts=127.0.0.1,172.18.10.30'
+  notify: restart nagios-nrepe
+
+- name: Configuring check_lvm for nrpe
+  lineinfile:
+    path: /etc/nagios/nrpe.cfg
+    regexp: 'command\[check_lvm\]='
+    line: 'command[check_lvm]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /'
+  notify: restart nagios-nrepe
+
+- name: Configuring check_extension for nrpe
+  lineinfile:
+    path: /etc/nagios/nrpe.cfg
+    regexp: 'command\[check_extension\]='
+    line: 'command[check_extension]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /data'
+  notify: restart nagios-nrepe
+

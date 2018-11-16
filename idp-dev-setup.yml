@@ -1,0 +1,10 @@
+---
+  - hosts: idp
+    become: True
+    roles:
+      - { role: shibboleth-idp,
+          www_host: "idp.coegss.hlrs.de",
+          letsencrypt_email: "shcherbakov@hlrs.de",
+          letsencrypt_LOCAL_backup_path: "~/Documents/letsencrypt/coegss/idp.tar.gz"
+        }
+

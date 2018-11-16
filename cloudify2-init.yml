@@ -1,0 +1,42 @@
+---
+  - hosts: services
+    roles:
+      - registerNewVMs
+
+  - hosts: CoeGSS-centos-Cloudify2
+    vars:
+      ansible_python_interpreter: python
+    roles:
+      - _get-if-by-mac
+      - upload_public_key
+      - userConfig
+      - { role: second-interface, if1: "{{br1_if_dev}}", ip1: "141.58.0.71",restart_network_service: False}
+      - { role: replace-main-ip, if0: "{{br0_if_dev}}", ip0: "172.18.10.60", gw0: "172.18.10.1", restart_network_service: False}
+      # - fix_sources # Ubuntu
+      # - nagios
+
+    post_tasks:
+      - name: restart network service
+        service:
+          name: network
+          state: restarted
+
+  #     - name: Disable built-in centos user
+  #       user:
+  #         name: centos
+  #         expires: 1
+  #       when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  #     - meta: clear_host_errors
+
+  # - hosts: CoeGSS-centos-Cloudify2
+  #   vars:
+  #     ansible_python_interpreter: python
+  #     ansible_user: hpcoshch
+  #   tasks:
+  #     - name: restart network service
+  #       service:
+  #         name: network
+  #         state: restarted
+
+

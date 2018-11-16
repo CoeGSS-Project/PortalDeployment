@@ -1,0 +1,219 @@
+--- 
+# Install the required packages
+- name: Install CKAN dependencies
+  apt:
+    # python-dev postgresql libpq-dev python-pip python-virtualenv git-core solr-jetty openjdk-8-jdk redis-server
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - python-dev
+    - postgresql
+    - libpq-dev
+    - python-pip
+    - python-virtualenv
+    - git-core
+    - solr-jetty
+    - openjdk-8-jdk
+    - redis-server
+    - python-psycopg2 # Ansible postgresql_user dependency
+    - apache2 
+    - libapache2-mod-wsgi 
+    - libapache2-mod-rpaf
+    #- nginx
+    - postfix
+- name: Create a system user ckan
+  user:
+    name: "{{ckan_sys_user}}"
+    # expires: 1
+
+#Install CKAN into a Python virtual environment
+- block:
+  - name: check if virtualenv already exists -> {{ ckan_venv_path }}
+    stat: 
+      path={{ ckan_venv_path }}
+    register: venv_dir
+
+  - name: create virtualenv {{ ckan_venv_path }} and activate for ckan 
+    command: virtualenv {{ ckan_venv_path }} creates={{ ckan_venv_path }}/bin/activate
+    when: venv_dir.stat.isdir is not defined
+
+  - name: Install Install setuptools into virtualenv {{ ckan_venv_path }}
+    pip: virtualenv={{ ckan_venv_path }} name="setuptools" version="{{ckan_setup_tools_version}}"
+
+  - name: Install ckan into venv {{ ckan_venv_path }}
+    pip: virtualenv={{ ckan_venv_path }} name="{{ckan_pip_url}}" editable=True
+
+  - name: Install ckan requirements into venv {{ ckan_venv_path }}
+    pip: virtualenv={{ ckan_venv_path }} requirements="{{ckan_venv_path}}/src/ckan/requirements.txt"
+
+  become_user: "{{ckan_sys_user}}"
+
+#Setup a PostgreSQL database
+- block:
+  - name: PostgreSQL | Ensure PostgreSQL is running
+    service:
+      name: postgresql
+      state: started
+
+  - name: PostgreSQL | Make sure the PostgreSQL databases are present
+    postgresql_db:
+      name: "{{ckan_db_name}}"
+      encoding: "{{postgresql_encoding}}"
+      lc_collate: "{{postgresql_locale}}"
+      lc_ctype: "{{postgresql_locale}}"
+      template: "template0"
+      state: present    
+
+  - name: PostgreSQL | Ensure user has access to the database
+    postgresql_user:
+      db: "{{ckan_db_name}}"
+      name: "{{ ckan_db_user }}"
+      password: "{{ ckan_db_pass }}"
+      priv: ALL
+      state: present
+      login_user: "{{postgresql_admin_user}}"
+
+  - name: PostgreSQL | Ensure user does not have unnecessary privileges
+    postgresql_user:
+      name: "{{ ckan_db_user }}"
+      role_attr_flags: "NOSUPERUSER,NOCREATEROLE,NOCREATEDB"
+      state: present
+
+  become_user: "{{postgresql_admin_user}}"
+
+#Create a CKAN config file
+- name: Create ckan config dir
+  file:
+    path: /etc/ckan/default
+    state: directory
+    mode: 0755
+    owner: "{{ckan_sys_user}}"
+
+- name: Create ckan development configs
+  shell: "{{ckan_venv_path}}/bin/paster make-config ckan /etc/ckan/default/development.ini"
+  creates: /etc/ckan/default/development.ini
+
+- name: Create ckan production configs
+  shell: "{{ckan_venv_path}}/bin/paster make-config ckan /etc/ckan/default/production.ini"
+  creates: /etc/ckan/default/production.ini
+  
+- name: Updating development config file
+  lineinfile:
+    path: /etc/ckan/default/development.ini    
+    regexp: "^[#\n ]*{{item.key | regex_escape()}}[\ ]*="
+    line: "{{ item.key }} = {{ item.value }}"
+  with_items:
+    - { key: 'sqlalchemy.url', value: 'postgresql://ckan_default:{{ckan_db_pass}}@localhost/ckan_default' }
+    - { key: 'ckan.site_id', value: 'default' }
+    - { key: 'ckan.site_url', value: ' http://testting.coegss.de'}
+    
+#Setup Solr
+- name: configure Solr - jetty8
+  lineinfile:
+    path: /etc/default/jetty8    
+    regexp: "^[#\n ]*{{item.key | regex_escape()}}[\ ]*="
+    line: "{{ item.key }}={{ item.value }}"
+  with_items:
+    - { key: 'NO_START', value: '0' }
+    - { key: 'JETTY_HOST', value: '127.0.0.1' }
+    - { key: 'JETTY_PORT', value: '8983'}
+ 
+#Replace the default schema.xml file with a symlink to the CKAN schema file included in the sources
+- name: Replace the default schema.xml
+  command: mv /etc/solr/conf/schema.xml /etc/solr/conf/schema.xml.bak
+
+# Link to schema.xml
+- name: Create symbolic link to schema.xml
+  file:
+    src: "{{ ckan_venv_path }}/src/ckan/ckan/config/solr/schema.xml"
+    dest: /etc/solr/conf/schema.xml
+    state: link
+    
+- name: restart the Jetty server  
+  service:
+    name: jetty8
+    state: restarted
+    
+- name: change the solr_url setting in the CKAN configuration file (/etc/ckan/default/production.ini) 
+  lineinfile:
+    path: /etc/ckan/default/production.ini    
+    regexp: "^[#\n ]*{{item.key | regex_escape()}}[\ ]*="
+    line: "{{ item.key }} = {{ item.value }}"
+    insertafter: '^solr_url'
+  with_items:
+    - { key: 'solr_url', value: 'http://141.58.0.64:8080/solr/core0' }
+    - { key: 'solr_user', value: 'solr_admin' }
+    - { key: 'solr_password', value: 'CoeGSS1981!'}
+    #- { key: 'solr_url', value: 'http://127.0.0.1:8983/solr' }
+  
+# Link to who.ini
+- name: Create symbolic link to who.ini
+  file:
+    src: "{{ ckan_venv_path }}/src/ckan/who.ini"
+    dest: "/etc/ckan/default/who.ini"
+    state: link
+    
+# Create database tables
+- name: Create database tables    
+  shell: "chdir={{ckan_venv_path}}/src/ckan {{ckan_venv_path}}/bin/paster db init -c /etc/ckan/default/development.ini"
+  #shell: "chdir={{ckan_venv_path}}/src/ckan {{ckan_venv_path}}/bin/paster db init -c /etc/ckan/default/development.ini"
+  #paster: virtualenv={{ ckan_venv_path }} chdir={{ckan_venv_path}}/src/ckan db init -c /etc/ckan/default/development.ini
+  
+## Paste development server to serve CKAN from the command-line
+#- name: serve CKAN from the command-line
+#  shell: "chdir={{ckan_venv_path}}/src/ckan {{ckan_venv_path}}/bin/paster serve /etc/ckan/default/development.ini"   
+##Open http://127.0.0.1:5000/ in a web browser, and you should see the CKAN front page.
+
+- name: insert a line to hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: '{{ vm_ip }}   {{ server_name }}'
+    #insertafter: .*{{ vm_name }}
+
+#Deploying Ckan
+#1. Create a production.ini File
+- name: Create a production.ini File
+  command: cp /etc/ckan/default/development.ini /etc/ckan/default/production.ini
+
+#Copy configuration files
+- name: Copying certificates directory to the remote server
+  copy:
+    src={{ role_path }}/files/ dest=/etc/apache2/coegss-certs
+
+- name: Apache2 config file
+  template: src=ckan_default.conf dest=/etc/apache2/sites-available/
+  register: ckan_default_config
+
+# Modify the Apache ports.conf file (/etc/apache2/ports.conf)
+## cat /etc/apache2/ports.conf------------------------------------------------------
+## If you just change the port or add more ports here, you will likely also
+## have to change the VirtualHost statement in
+## /etc/apache2/sites-enabled/000-default.conf
+
+##CKAN
+##NameVirtualHost *.80
+#Listen 80
+
+#<IfModule ssl_module>
+#  Listen 443
+#</IfModule>
+
+#<IfModule mod_gnutls.c>
+#  Listen 443
+#</IfModule>
+
+## cat /etc/apache2/ports.conf------------------------------------------------------
+# Enable your CKAN site
+- name: enabled ssl
+  apache2_module: state=present name=ssl
+  
+- name: a2ensite ckan_default
+  command: a2ensite ckan_default
+  
+- name: a2dissite 000-default
+  command: a2dissite 000-default
+  
+- name: Apache2 restart
+  service: name=apache2 state=restarted
+  when: ckan_default_config.changed
+    

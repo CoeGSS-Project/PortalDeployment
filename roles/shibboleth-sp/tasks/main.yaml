@@ -1,0 +1,207 @@
+---
+# sudo apt-get install shibboleth-sp2-common shibboleth-sp2-schemas shibboleth-sp2-utils
+  - name: Obtaining nginx version
+    shell: "nginx -v 2>&1|cut -d '/' -f2"
+    register: ngx_ver
+
+  - name: Setting nginx_version variable
+    set_fact:
+      nginx_version_tag: "{{ngx_ver.stdout}}"
+
+  - debug: var=nginx_version_tag
+
+  - name: Update packages
+    apt:
+      update_cache: yes
+      # upgrade: dist
+  - name: Install Shibboleth-sp packages
+    apt:
+      name: "{{item}}"
+      state: latest
+    with_items:
+      - shibboleth-sp2-common
+      - shibboleth-sp2-schemas
+      - shibboleth-sp2-utils
+      - python-pip
+      - supervisor
+      - mercurial
+  - name: Update supervisor with pip
+    pip:
+      name: supervisor
+      extra_args: "-U"
+      executable: "pip2"
+  - name: Create a link to supervisor binaries
+    file:
+      src: "/usr/local/bin/{{item}}"
+      dest: "/usr/bin/{{item}}"
+      state: link
+      force: yes
+    with_items:
+      - supervisorctl
+      - supervisord
+
+  - name: Create supervisor tasks
+    template:
+      src: shib-fcgi.conf.j2
+      dest: /etc/supervisor/conf.d/shib-fcgi.conf
+
+
+  - name: Restart supervisor
+    systemd:
+      state: restarted
+      daemon_reload: yes
+      name: supervisor
+
+  - name: create temporary build directory
+    tempfile:
+      state: directory
+      suffix: build
+    register: tmp_dir
+
+  - name: Checking if nginx-module-shibboleth is already installed
+    shell: dpkg-query -W 'nginx-module-shibboleth'
+    ignore_errors: True
+    register: is_shibboleth_module
+
+  - name: Checking if nginx-module-headersmore is already installed
+    shell: dpkg-query -W 'nginx-module-headersmore'
+    ignore_errors: True
+    register: is_headersmore_module
+
+  - name: download pkg‑oss build_module.sh
+    get_url:
+      url: https://hg.nginx.org/pkg-oss/raw-file/default/build_module.sh
+      dest: "{{tmp_dir.path}}/build_module.sh"
+      mode: 0555
+    when: is_shibboleth_module|failed or is_headersmore_module|failed
+  
+  - name: Patch the build script
+    replace:
+      path: "{{tmp_dir.path}}/build_module.sh"
+      regexp: '(\s*)sudo(\s+)\$PKG_MGR(\s+)install(\s+)(?!\-y)'
+      replace: '\1sudo $PKG_MGR install -y '
+    when: is_shibboleth_module|failed or is_headersmore_module|failed
+
+
+  - name: build nginx-http-shibboleth module
+    shell: "./build_module.sh -v {{nginx_version_tag}} https://github.com/nginx-shib/nginx-http-shibboleth.git < /dev/null"
+    args:
+      chdir: "{{tmp_dir.path}}"
+      creates: /root/debuild
+    register: build_mod
+    when: is_shibboleth_module|failed
+
+  - debug: var=build_mod
+
+  - name: Locate nginx-http-shibboleth module
+    shell: "find /root/debuild/ -maxdepth 1 -type f -name nginx-module-shibboleth_*.deb -print"
+    register: build_deb
+    when: is_shibboleth_module|failed
+
+  # - debug: var=build_deb
+
+  - name: Install nginx-http-shibboleth module
+    apt:
+      deb: "{{build_deb.stdout}}"
+      # deb: "/root/debuild/nginx-module-shibboleth_{{nginx_version_tag}}~xenial_amd64.deb"
+    when: is_shibboleth_module|failed
+
+  - name: Add nginx-http-shibboleth module module to nginx config
+    template:
+      src: mod_shibboleth.conf.j2
+      dest: /etc/nginx/modules-available/mod_shibboleth.conf
+
+  - name: Enable nginx-http-shibboleth module nginx module
+    file:
+      src: /etc/nginx/modules-available/mod_shibboleth.conf
+      dest: /etc/nginx/modules-enabled/mod_shibboleth.conf
+      state: link
+    notify:
+      - reload nginx
+
+  - name: Delete build folder
+    file:
+      name: /root/debuild
+      state: absent
+
+  - name: build headers-more-nginx-module module
+    shell: "./build_module.sh -v {{nginx_version_tag}} https://github.com/openresty/headers-more-nginx-module.git < /dev/null"
+    args:
+      chdir: "{{tmp_dir.path}}"
+      creates: /root/debuild
+    register: build_mod
+    when: is_headersmore_module|failed
+
+  - debug: var=build_mod
+
+  - name: Locate nginx-http-shibboleth module
+    shell: "find /root/debuild/ -maxdepth 1 -type f -name nginx-module-headersmore_*.deb -print"
+    register: build_deb
+    when: is_headersmore_module|failed
+
+
+  - name: Install built module
+    apt:
+      deb: "{{build_deb.stdout}}"
+      # deb: "/root/debuild/nginx-module-headersmore_{{nginx_version_tag}}~xenial_amd64.deb"
+    when: is_headersmore_module|failed
+
+  - name: Add module to nginx config
+    template:
+      src: mod_headersmore.conf.j2
+      dest: /etc/nginx/modules-available/mod_headersmore.conf
+
+  - name: Enable nginx module
+    file:
+      src: /etc/nginx/modules-available/mod_headersmore.conf
+      dest: /etc/nginx/modules-enabled/mod_headersmore.conf
+      state: link
+    notify:
+      - reload nginx
+
+  - name: Delete build folder
+    file:
+      name: /root/debuild
+      state: absent
+
+# mod_shibboleth.conf.j2
+
+  - name: creating shib_clear_headers file
+    template:
+      src: shib_clear_headers.j2
+      dest: /etc/nginx/shib_clear_headers
+
+  - name: creating shib_fastcgi_params file
+    template:
+      src: shib_fastcgi_params.j2
+      dest: /etc/nginx/shib_fastcgi_params
+
+
+  - name: generate shibboleth keys
+    shell: "shib-keygen"
+    args:
+      creates: /etc/shibboleth/sp-key.pem
+    register: shib_keygen
+    become: true
+
+
+  - name: creating shibboleth config file
+    template:
+      src: shibboleth2.xml.j2
+      dest: /etc/shibboleth/shibboleth2.xml
+
+  - name: Grab the IdP Metadata
+    shell: "wget --no-check-certificate https://{{shibboleth_idp_host}}/idp/shibboleth -O idp-metadata.xml && systemctl restart shibd"
+    args:
+      chdir: /etc/shibboleth
+      creates: /etc/shibboleth/idp-metadata.xml
+    register: wget_idp_metadata
+    become: true
+    ignore_errors: True
+
+  - debug:
+      msg: "IDP is requiered here. ignore_errors set to True for debugging purposes"
+
+  # - debug: var=wget_idp_metadata
+
+

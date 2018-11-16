@@ -1,0 +1,13 @@
+---
+  - hosts: services
+    roles:
+      - registerNewVMs
+  - hosts: CoeGSS-xenial-ShibbolethIDP
+    roles:
+      - _get-if-by-mac
+      - upload_public_key
+      - { role: second-interface, if1: "{{br1_if_dev}}", ip1: "141.58.0.68"}
+      - fix_sources
+      - nagios
+      - { role: replace-main-ip, if0: "{{br0_if_dev}}", ip0: "172.18.10.50", gw0: "172.18.10.1"}
+

@@ -1,0 +1,48 @@
+---
+  - name: add groups
+    group: name={{ item.userName }} state=present
+    with_items: "{{users}}"
+
+  - name: user Management
+    user: name={{ item.userName }} 
+          shell=/bin/bash groups={% if item.sudo %}sudo,{% endif %}{{ item.userName }}
+          group={{ item.userName }}
+          state=present
+    with_items: "{{users}}"
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: user Management
+    user: name={{ item.userName }} 
+          shell=/bin/bash groups={{ item.userName }}
+          group={{ item.userName }}
+          state=present
+    with_items: "{{users}}"
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  - name: 'sett up .ssh folder'
+    file: path="/home/{{ item.userName }}/.ssh"
+          state=directory 
+          mode=700 
+          owner={{ item.userName }}
+          group={{ item.userName }}
+    with_items: "{{users}}"
+
+
+  - name: move ssh key
+    authorized_key:
+      user={{ item.userName }}
+      key="{{ lookup('file', item.userName  + '.pub') }}"
+      state=present
+    with_items: "{{users}}"
+
+
+  - name: add users to sudoers
+    template:
+      src=sudoers.j2
+      dest="/etc/sudoers.d/{{ item.userName }}"
+      owner=root
+      group=root
+      mode=0440
+    with_items: "{{users}}"
+    when: item.sudo
+

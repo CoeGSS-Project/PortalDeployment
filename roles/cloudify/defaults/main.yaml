@@ -1,0 +1,15 @@
+---
+#cloudify variables
+repo_cloudify_manager_url: 'http://repository.cloudifysource.org/cloudify/18.7.23/community-release/cloudify-manager-install-community-18.7.23.rpm' 
+repo_cli_url: 'http://repository.cloudifysource.org/cloudify/18.7.23/community-release/cloudify-cli-community-18.7.23.rpm' 
+admin_password: 'cloudifyCoegss!'
+
+
+#server variables for Cloudify2 host
+vm_public_ip: '141.58.0.71'
+vm_private_ip: '172.18.10.60'
+#server variables for CoeGSS_test_vm2 host
+#vm_public_ip: '172.18.10.61' 
+#vm_private_ip: '172.18.10.61' 
+server_name: 'cloudify.coegss.hlrs.de'
+#vm_name: 'packer-ubuntu-16'

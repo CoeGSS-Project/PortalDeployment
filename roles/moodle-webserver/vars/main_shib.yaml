@@ -1,0 +1,147 @@
+---
+www_root: "/var/www/moodle"
+www_host: "test-vm"
+www_proto: "http"
+webserver_user: "www-data"
+webserver_group: "www-data"
+
+php_fpm_pool_user: "{{webserver_user}}"
+php_fpm_pool_group: "{{webserver_group}}"
+nginx_user: "{{webserver_user}}"
+nginx_group: "{{webserver_group}}"
+nginx_official_repo: True
+
+moodle_git_version: 32
+moodle_db_name: moodle
+moodle_db_user: moodleuser
+moodle_db_pass: "m00d1e_db_pa@55"
+moodle_data_dir: /var/moodle_data
+moodle_admin: admin
+moodle_admin_pass: "m00dleHLRS"
+moodle_admin_email: "noreply@example.com"
+moodle_site_fullname: "Moodle Training System"
+moodle_site_shortname: "Moodle"
+moodle_site_lang: "en"
+
+moodle_ldap_bind_dn: "cn=admin,dc=coegss,dc=hlrs,dc=de"
+moodle_ldap_contexts: "ou=people,dc=coegss,dc=hlrs,dc=de"
+moodle_ldap_host_url: "ldap://172.18.10.41"
+
+php_webserver_daemon: "nginx"
+php_enable_php_fpm: true
+
+php_fpm_listen: "127.0.0.1:9000"
+php_fpm_listen_allowed_clients: "127.0.0.1"
+php_fpm_pm_max_children: 50
+php_fpm_pm_start_servers: 5
+php_fpm_pm_min_spare_servers: 5
+php_fpm_pm_max_spare_servers: 5
+
+php_memory_limit: "128M"
+php_max_execution_time: "90"
+php_file_uploads: "On"
+php_upload_max_filesize: "256M"
+php_max_file_uploads: "10"
+php_post_max_size: "256M"
+
+php_packages: 
+  - php-fpm
+  - php-mysql
+  - php-curl
+  - php-zip
+  - php-xml
+  - php-mbstring
+  - php-xmlrpc
+  - php-soap
+  - php-gd
+  - php-intl
+  - php-ldap
+
+php_packages_extra: []
+
+
+nginx_http_params:
+  - sendfile on
+  - access_log /var/log/nginx/access.log
+  - error_log /var/log/nginx/error.log
+nginx_sites:
+  moodle:
+     - listen 80
+     - server_name "{{www_host}}"
+     - server_tokens off
+     - location ^~ /.well-known/acme-challenge/ {  root "{{www_root}}"; }
+     - location / { return 301 https://$server_name$request_uri; }
+  moodle_ssl:
+     - listen 443 ssl default deferred http2
+     - server_name "{{www_host}}"
+     - server_tokens off
+     - ssl on
+     - ssl_certificate         /etc/letsencrypt/live/{{ www_host }}/fullchain.pem
+     - ssl_certificate_key     /etc/letsencrypt/live/{{ www_host }}/privkey.pem
+     - ssl_trusted_certificate /etc/letsencrypt/live/{{ www_host }}/fullchain.pem
+
+     - ssl_session_cache shared:SSL:50m
+     - ssl_session_timeout 1d
+     - ssl_stapling on
+     - ssl_stapling_verify on
+
+     - ssl_protocols TLSv1.2
+     - ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256'
+
+     - ssl_dhparam /etc/nginx/dhparams.pem
+     - ssl_prefer_server_ciphers on
+
+     - add_header Strict-Transport-Security max-age=15768000
+
+     - root "{{www_root}}"
+
+     - location / { index index.php; }
+     # - location /images/ { try_files $uri $uri/ /index.html; }
+     -  |
+        location = /shibauthorizer {
+          internal;
+          include fastcgi_params;
+          fastcgi_pass unix:/var/run/shibauthorizer.sock;
+        }
+     -  |
+        location /Shibboleth.sso {
+          include fastcgi_params;
+          fastcgi_pass unix:/var/run/shibresponder.sock;
+        }
+     -  |
+        location /auth/shibboleth/index.php {
+             include shib_clear_headers;
+             #Add your attributes here. They get introduced as headers
+             #by the FastCGI authorizer so we must prevent spoofing.
+             more_clear_input_headers 'displayName' 'mail' 'persistent-id';
+             shib_request /shibauthorizer;
+             shib_request_use_headers on;
+            fastcgi_split_path_info  ^(.+\.php)(/.+)$;
+            fastcgi_index            index.php;
+            fastcgi_pass             "{{php_fpm_listen}}";
+            include                  fastcgi_params;
+            fastcgi_param   PATH_INFO       $fastcgi_path_info;
+            fastcgi_param   SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_read_timeout 600;
+        }
+     -  |
+        location ~ ^/admin/.*?[^/]\.php(/|$) {
+            fastcgi_split_path_info  ^(.+\.php)(/.+)$;
+            fastcgi_index            index.php;
+            fastcgi_pass             "{{php_fpm_listen}}";
+            include                  fastcgi_params;
+            fastcgi_param   PATH_INFO       $fastcgi_path_info;
+            fastcgi_param   SCRIPT_FILENAME $document_root$fastcgi_script_name;
+            fastcgi_read_timeout 600;
+        }
+     -  |
+        location ~ [^/]\.php(/|$) {
+            fastcgi_split_path_info  ^(.+\.php)(/.+)$;
+            fastcgi_index            index.php;
+            fastcgi_pass             "{{php_fpm_listen}}";
+            include                  fastcgi_params;
+            fastcgi_param   PATH_INFO       $fastcgi_path_info;
+            fastcgi_param   SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        }
+
+ 

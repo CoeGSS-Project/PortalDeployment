@@ -1,0 +1,14 @@
+---
+  - hosts: services
+    roles:
+      - registerNewVMs
+  - hosts: CoeGSS-xenial-Cloudify
+    roles:
+      - _get-if-by-mac
+      - upload_public_key
+      # - { role: second-interface, if1: "{{br1_if_dev}}", ip1: "", gw1: ""}
+      - { role: replace-main-ip, if0: "{{br0_if_dev}}", ip0: "172.18.10.53", gw0: "172.18.10.1"}
+      - fix_sources
+      - nagios
+      - userConfig
+

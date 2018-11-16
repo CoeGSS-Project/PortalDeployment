@@ -1,0 +1,53 @@
+
+Shibboleth Installation:
+
+IDP:
+
+https://github.com/malavolti/HOWTO-Install-and-Configure-Shibboleth-Identity-Provider
+
+
+Configure Apache Tomcat 8
+=========================
+	6. Verify if the IdP works by opening this page on your browser:
+
+		Don't forget to:
+	
+			service tomcat8 restart
+			service apache2 restart
+		
+		
+Speed up Tomcat 8 startup
+=========================
+	8. Insert the output list into /opt/tomcat/conf/catalina.properties at the tail of tomcat.util.scan.StandardJarScanFilter.jarsToSkip
+	
+		it should be ---> /etc/tomcat8/catalina.properties
+
+		
+Configure Shibboleth Identity Provider v3.2.1 to release the persistent-id (Stored mode)
+========================================================================================
+	3. Install the libraries Common DBCP2[2] used for generation of saml-id:
+	
+		wget http://ftp.cixug.es/apache/commons/dbcp/binaries/commons-dbcp2-2.1.1-bin.tar.gzhttp://ftp.cixug.es/apache/commons/dbcp/binaries/commons-dbcp2-2.1.1-bin.tar.gz
+	
+	4. Install the libraries Tomcat Common Pool[3] used for the generation of saml-id:
+		
+		wget http://ftp.cixug.es/apache//commons/pool/binaries/commons-pool2-2.4.3-bin.tar.gz
+		
+	6. Create and prepare the "shibboleth" MySQL DB to host the values of the several persistent-id and StorageRecords to host other useful information about user consent:
+	
+		Used a more up to date sql. See the shibboleth-db.sql I sent you
+
+	7. Enable the generation of the persistent-id (this replace the deprecated attribute eduPersonTargetedID)
+	
+		MyDataSource changed to PersistentIdDataSource
+		
+	8. Enable JPAStorageService for the StorageService of the user consent:
+	
+		Be careful with MyDataSource --> PersistenceIdDataSource change above
+		
+	9. Connect the openLDAP to the IdP to allow the authentication of the users:
+		
+		Solution 3: plain LDAP
+		
+			idp.authn.LDAP.dnFormat = uid=%s,ou=people,dc=ldap,dc=test,dc=coegss,dc=hlrs,dc=de
+	

@@ -1,0 +1,37 @@
+---
+  - name: Replacing /etc/network/interfaces
+    template: src=interfaces.j2 dest=/etc/network/interfaces
+    register: mainif
+    when: 
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Restart networking
+    shell: "systemctl restart networking.service"
+    when: 
+      - mainif.changed
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      - restart_network_service
+
+
+
+  - name: Replacing or adding main interface
+    template: src=centos_ifcfg.j2 dest="/etc/sysconfig/network-scripts/ifcfg-{{if0}}"
+    register: mainif
+    when: 
+      - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  # - name: Restart networking
+  #   shell: "systemctl restart network.service"
+  #   when: 
+  #     - mainif.changed
+  #     - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  - name: Restart network service for interface
+    service:
+      name: network
+      state: restarted
+      args: "{{if0}}"
+    when: 
+      - mainif.changed
+      - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      - restart_network_service

@@ -1,0 +1,11 @@
+#!/bin/bash
+# out=$(apache2 -v 2>/dev/null | grep 'version' ) && echo "{\"apache_vesion\":\"$out\"}" || echo "{\"apache_vesion\":\"none\"}"
+ap_ver=$(apache2 -v 2>/dev/null | grep 'version' )||true
+cipher=$(grep "^[[:blank:]]*[^[:blank:]#]*SSLCipherSuite" /etc/apache2/mods-enabled/ssl.conf| tr -d '[:space:]' 2>/dev/null )||true
+proto=$(grep "^[[:blank:]]*[^[:blank:]#]*SSLProtocol" /etc/apache2/mods-enabled/ssl.conf| tr -d '[:space:]' 2>/dev/null )||true
+
+# {"apache_vesion" : "$ap_ver", "SSLCipherSuite" : "$cipher", "SSLProtocol" : "$proto"}
+
+cat <<EOF
+{"apache_vesion" : "$ap_ver", "SSLCipherSuite" : "$cipher", "SSLProtocol" : "$proto"}
+EOF

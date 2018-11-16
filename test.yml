@@ -1,0 +1,26 @@
+---
+# - hosts: moodle
+#   gather_facts: no
+#   tasks:
+#   - debug: var=hostvars
+#   # - set_fact: hostvars['idp']['ansible_host']="123"
+#   - add_host:
+#       name: "idp"
+#       ansible_host: "123"
+#   - debug: var=hostvars
+
+
+- hosts: services
+  tasks:
+  - shell: "virsh domiflist CoeGSS-xenial-ShibbolethIDP|grep 'br0' |awk '{print $5}'"
+    become: True
+    register: domiflist_res
+  # - set_fact: vm_mac=domiflist_res['stdout']
+
+  - shell: "nmap -sP 172.18.2.0/23 >/dev/null && /usr/sbin/arp -an | grep '{{domiflist_res['stdout']}}' | awk '{print $2}' | sed 's/[()]//g'"
+    register: arp_res
+  - add_host:
+      name: "idp"
+      ansible_host: "{{arp_res['stdout']}}"
+  - debug: var=hostvars['idp']
+

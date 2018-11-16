@@ -1,0 +1,9 @@
+<Context docBase="{{shibboleth_idp_target_dir}}/war/idp.war"
+         privileged="true"
+         antiResourceLocking="false"
+         swallowOutput="true">
+ 
+    <!-- Work around lack of Max-Age support in IE/Edge -->
+    <CookieProcessor alwaysAddExpires="true" />
+ 
+</Context>

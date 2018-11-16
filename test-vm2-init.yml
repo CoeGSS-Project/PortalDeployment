@@ -1,0 +1,19 @@
+---
+  # - hosts: services
+  #   roles:
+  #     - registerNewVMs
+  # - hosts: CoeGSS-centos-test-vm2
+  - hosts: CoeGSS_test_vm2
+    vars:
+      ansible_python_interpreter: python
+      ansible_become: True
+      ansible_become_method: sudo
+    roles:
+      # - _get-if-by-mac
+      # - upload_public_key
+      # - { role: second-interface, if1: "{{br1_if_dev}}", ip1: "141.58.0.71",}
+      # - { role: replace-main-ip, if0: "{{br0_if_dev}}", ip0: "172.18.10.61", gw0: "172.18.10.1"}
+      # - fix_sources
+      # - nagios
+      - userConfig
+

@@ -1,0 +1,11 @@
+---
+  - hosts: services
+    vars:
+      ansible_become: True
+    roles:
+      - { role: userConfig,   users: [
+            { userName: 'yosandra', sudo: True} 
+            { userName: 'sergiy', sudo: True} 
+          ]}
+
+

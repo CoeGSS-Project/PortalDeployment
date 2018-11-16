@@ -1,0 +1,137 @@
+---
+- name: Running apt update
+  apt: update_cache=yes
+- name: Installing required packages
+  apt: name={{item}} state=present
+  with_items:
+   - python-pip
+   - libsasl2-dev
+   - libldap2-dev
+   - libssl-dev
+   - apache2
+   - libapache2-mod-wsgi 
+   - python-virtualenv
+   - python-dev 
+   - libpq-dev 
+   - postgresql
+   - postgresql-contrib
+   - git
+   - python-psycopg2
+
+- name: Upgrade pip
+  command: pip install --upgrade pip
+
+- name: Create portal user
+  user: name={{portaluser}} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+- name: Read SSH public key
+  slurp: src=/home/{{portaluser}}/.ssh/id_rsa.pub
+  register: public_key
+- debug: msg="{{ public_key['content'] | b64decode }}"
+
+#Postgres Task
+- block:
+  - name: PostgreSQL | Ensure PostgreSQL is running
+    service:
+      name: postgresql
+      state: started
+
+  - name: PostgreSQL | Make sure the PostgreSQL databases are present
+    postgresql_db:
+      name: "{{dbname}}"
+      encoding: "{{postgresql_encoding}}"
+      lc_collate: "{{postgresql_locale}}"
+      lc_ctype: "{{postgresql_locale}}"
+      template: "template0"
+      state: present    
+
+  - name: PostgreSQL | Ensure user has access to the database
+    postgresql_user:
+      db: "{{ dbname }}"
+      name: "{{ dbuser }}"
+      password: "{{ dbpassword }}"
+      priv: ALL
+      state: present
+      login_user: "{{postgresql_admin_user}}"
+
+  - name: PostgreSQL | Ensure user does not have unnecessary privileges
+    postgresql_user:
+      name: "{{ dbuser }}"
+      role_attr_flags: NOSUPERUSER
+      state: present
+
+  become_user: "{{postgresql_admin_user}}"
+
+#Django tasks - Need to change to user portal
+- block:
+  - name: pull branch portal_prod
+    git:
+      repo='{{ repo_url }}/{{ repo }}.git'
+      dest={{ repo_dir }}
+      version=portal_prod
+
+  - name: moving portal folder coegss_portal to {{ home_dir }}
+    command: mv {{ repo_dir }}/{{ django_project }} {{ home_dir}}
+
+  - name: removing unnecesary folders {{ repo_dir }}
+    file:
+     path={{ repo_dir }} state=absent
+
+  - name: check if virtualenv already exists -> {{ virtualenv_path }}
+    stat: 
+      path={{ virtualenv_path }}
+    register: venv_dir
+
+  - name: create virtualenv {{ virtualenv_path }} for Django application {{ django_dir }}
+    command: virtualenv {{ virtualenv_path }} creates={{ virtualenv_path }}/bin/activate
+    when: venv_dir.stat.isdir is not defined
+
+  - name: Install application required by the Django app {{ django_dir }} inside virtualenv {{ virtualenv_path }}
+    pip: virtualenv={{ virtualenv_path }} requirements={{ django_dir }}/requirements.txt
+
+  - name: django collectstatic env-> {{virtualenv_path}} app_path -> {{ django_dir }}
+    django_manage: command=collectstatic virtualenv="{{virtualenv_path}}" app_path="{{ django_dir }}"
+
+  - name: django migrate
+    django_manage: command=migrate virtualenv="{{virtualenv_path}}" app_path="{{ django_dir }}"
+
+  become_user: "{{portaluser}}"
+
+#change group and owner to files
+- name: change group at the portal folder to www-data
+  file: path={{ django_dir }} group=www-data
+
+- name: change group and owner to file log.file to www-data
+  file: path={{ home_dir }}/log.file owner=www-data group=www-data
+
+- name: insert a line to hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: '{{ vm_ip }}   {{ server_name }}'
+    insertafter: .*{{ vm_name }}
+
+#Copy configuration files
+- name: Copying certificates directory to the remote server
+  copy:
+    src={{ role_path }}/files/ dest=/etc/apache2/coegss-certs
+
+- name: Apache2 config file
+  template: src=portal.conf dest=/etc/apache2/sites-available/
+  register: portal_config
+    
+- name: enabled headers
+  apache2_module: state=present name=headers
+
+- name: enabled wsgi
+  apache2_module: state=present name=wsgi
+
+- name: enabled ssl
+  apache2_module: state=present name=ssl
+
+- name: a2ensite portal
+  command: a2ensite portal
+
+- name: Apache2 restart
+  service: name=apache2 state=restarted
+  when: portal_config.changed
+
+

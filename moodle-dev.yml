@@ -1,0 +1,28 @@
+---
+- hosts: moodle
+  become: True
+  roles:
+    # - test_role
+    - upload_public_key
+    - { role: second-interface, ip1: "141.58.0.69"}
+    - fix_sources
+    - mysql
+    # - { role: shibboleth-sp,
+    #     tags: ['shib'],
+    #     www_host: "shibboleth.coegss.hlrs.de",
+    #     www_proto: "https",
+    #     shibboleth_idp_host: "idp.coegss.hlrs.de",
+    #     ip1: "141.58.0.69",
+
+    #     }
+    - { role: moodle-webserver,
+        tags: ['deb'],
+        www_host: "shibboleth.coegss.hlrs.de",
+        www_proto: "https",
+        shibboleth_idp_host: "idp.coegss.hlrs.de",
+
+        letsencrypt_email: "shcherbakov@hlrs.de",
+        letsencrypt_LOCAL_backup_path: "~/Documents/letsencrypt/coegss/moodle.tar.gz"
+
+         }
+

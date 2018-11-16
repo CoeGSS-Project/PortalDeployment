@@ -1,0 +1,36 @@
+---
+  - name: obtain VM MAC
+    shell: "virsh domiflist {{VMS_image_prefix}}-{{vm.baseOS}}-{{vm.vmname}}|grep 'br0' |awk '{print $5}'"
+    become: True
+    register: domiflist_res
+  - name: obtain second MAC
+    shell: "virsh domiflist {{VMS_image_prefix}}-{{vm.baseOS}}-{{vm.vmname}}|grep 'br1' |awk '{print $5}'"
+    become: True
+    register: domiflist_res2
+  # - set_fact: vm_mac=domiflist_res['stdout']
+
+  # - shell: "nmap -sP 172.18.2.0/23 >/dev/null && /usr/sbin/arp -an | grep '{{domiflist_res['stdout']}}' | awk '{print $2}' | sed 's/[()]//g'"
+  - name: obtain VM IP
+    shell: "/usr/sbin/arp -an | grep '{{domiflist_res['stdout']}}' | awk '{print $2}' | sed 's/[()]//g'"
+    register: arp_res
+  - name: obtain alternate VM IP
+    shell: "/usr/sbin/arp -an | grep '{{domiflist_res2['stdout']}}' | awk '{print $2}' | sed 's/[()]//g'"
+    register: arp_res2
+  - name: Set VM IP (to alternate IP)
+    set_fact:
+      vm_ip: "{{arp_res2['stdout']}}"
+  - name: Set VM IP
+    set_fact:
+      vm_ip: "{{arp_res['stdout']}}"
+    when: arp_res['stdout']
+
+  - name: update hostvars with obtainded IP
+    add_host:
+      name: "{{VMS_image_prefix}}-{{vm.baseOS}}-{{vm.vmname}}"
+      ansible_host: "{{vm_ip}}"
+      br0_mac: "{{domiflist_res['stdout']}}"
+      br1_mac: "{{domiflist_res2['stdout']}}"
+  - name: Show debug info about Dynamic IPs
+    debug:
+      msg: "ansible_host: {{vm_ip}}, br0_mac: {{domiflist_res['stdout']}}, br1_mac: {{domiflist_res2['stdout']}}, ip1:{{arp_res['stdout']}}, ip2:{{arp_res2['stdout']}}"
+

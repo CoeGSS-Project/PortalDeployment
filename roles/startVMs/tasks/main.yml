@@ -1,0 +1,6 @@
+---
+  - name: start vms
+    virt: name={{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}} state=running
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+

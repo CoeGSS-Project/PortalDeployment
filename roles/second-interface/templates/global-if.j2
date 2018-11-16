@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+auto {{if1}}
+iface {{if1}} inet static
+  address {{ip1}}
+  netmask {{net1}}
+  gateway {{gw1}}
+{% for ns in nameservers1 %}
+  dns-nameserver {{ns}}
+{% endfor %}

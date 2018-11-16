@@ -1,0 +1,12 @@
+---
+dependencies:
+  # - { role: ansible-role-nginx }
+  # - { role: ansible-role-php }
+  # - { role: lestsencrypt-backup }
+
+  - { role: ansible-role-nginx, nginx_disabled_sites: [moodle_ssl] , tags: [moodle_dep] }
+  - { role: letsencrypt, tags: [moodle_dep] }
+  - { role: ansible-role-nginx, tags: [moodle_dep] }
+  - { role: lestsencrypt-backup, tags: [moodle_dep] }
+  - { role: mysql, tags: [moodle_dep] }
+  - { role: ansible-role-php, tags: [moodle_dep] }

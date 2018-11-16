@@ -1,0 +1,10 @@
+---
+  ansible_become: True
+  VMs_root: "/home/vmPool"
+  VMs_base_images: "{{VMs_root}}/baseVMs"
+  VMs_images: "{{VMs_root}}/CoeGSS"
+  VMS_image_prefix: "CoeGSS"
+  VMS_image_owner: "qemu"
+  VMS_image_group: "qemu"
+  VMs_data_image_size: "100G"
+

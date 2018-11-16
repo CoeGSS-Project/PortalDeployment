@@ -1,0 +1,174 @@
+---
+- name: Running apt update
+  apt: update_cache=yes
+  
+- name: Installing required packages
+  apt: name={{item}} state=present
+  with_items:
+   #- libtiff4-dev 
+   - libtiff5-dev
+   - libjpeg8-dev 
+   - zlib1g-dev 
+   - libfreetype6-dev 
+   - liblcms2-dev 
+   - libwebp-dev 
+   - tcl8.5-dev 
+   - tk8.5-dev 
+   - python-tk
+   - libsasl2-dev 
+   - python-dev 
+   - libldap2-dev 
+   - libssl-dev      
+   - postgresql
+   - postgresql-contrib
+   - postgresql-server-dev-all
+   - python-psycopg2
+   - python-setuptools
+   - python-pip
+  # - ldap_utils
+   - apache2 
+  # - apache2.2-common 
+  # - apache2-mpm-prefork 
+   - apache2-utils 
+   - libexpat1 
+   - ssl-cert
+   - libapache2-mod-wsgi
+         
+- name: Upgrade pip
+  command: pip install --upgrade pip
+  
+- easy_install:
+    name: -U setuptools
+    state: latest
+
+- name: Create askbot user
+  user: name={{askbotuser}} generate_ssh_key=yes ssh_key_bits=2048 ssh_key_file=.ssh/id_rsa
+  
+- name: Read SSH public key
+  slurp: src=/home/{{askbotuser}}/.ssh/id_rsa.pub
+  register: public_key
+- debug: msg="{{ public_key['content'] | b64decode }}"
+
+#Postgres Task
+- block:
+  - name: PostgreSQL | Ensure PostgreSQL is running
+    service:
+      name: postgresql
+      state: started
+
+  - name: PostgreSQL | Make sure the PostgreSQL databases are present
+    postgresql_db:
+      name: "{{dbname}}"
+      encoding: "{{postgresql_encoding}}"
+      lc_collate: "{{postgresql_locale}}"
+      lc_ctype: "{{postgresql_locale}}"
+      template: "template0"
+      state: present    
+
+  - name: PostgreSQL | Ensure user has access to the database
+    postgresql_user:
+      db: "{{ dbname }}"
+      name: "{{ dbuser }}"
+      password: "{{ dbpassword }}"
+      priv: ALL
+      state: present
+      login_user: "{{postgresql_admin_user}}"
+
+  - name: PostgreSQL | Ensure user does not have unnecessary privileges
+    postgresql_user:
+      name: "{{ dbuser }}"
+      role_attr_flags: NOSUPERUSER
+      state: present
+
+  become_user: "{{postgresql_admin_user}}"
+
+#More libraries with pip
+- block: 
+  - name: install various libraries with pip
+    action: pip name={{item}} state=present
+    with_items: 
+      - kombu
+      - billiard
+      - askbot
+      - psycopg2
+      - python-ldap
+      - six==1.10.0 # version 1.11.0  get error on call six.with_metaclass(models.SubfieldBase, models.Field)
+  environment:
+      LC_ALL: "C" 
+
+#Deploy askbot
+- block:
+  - name: Create directory django_dir {{django_dir}}
+    command: mkdir {{ django_dir }}
+    
+  - name: askbot setup
+    command: "askbot-setup --db-engine=1 --db-name={{dbname}} --db-password={{dbpassword}} --db-user={{dbuser}} --dir-name={{ django_dir }} creates={{ django_dir }}/settings.py"
+#--
+  - name: turn off DEBUG # Debug mode is on, do not use it in production. To turn it off, use DEBUG = False in your settings.py file. 
+    lineinfile:
+      path: "{{ django_dir }}/settings.py"    
+      regexp: "DEBUG = True"
+      line: "DEBUG = False # set to True to enable debugging"
+
+  - name: Updating settings.py file #'HOST': '' to solver error django.db.utils.OperationalError: FATAL:  Peer authentication failed for user
+    lineinfile:
+      path: "{{ django_dir }}/settings.py"    
+      regexp: "'HOST': ''"
+      line: "        'HOST': 'localhost',              # Set to empty string for localhost. Not used with sqlite3."
+      
+  - name: syncdb askbot
+    command: "python manage.py syncdb --noinput chdir={{ django_dir }}"
+  
+  - name: migrate askbot
+    shell: "python manage.py migrate --noinput || true chdir={{ django_dir }}"
+#--  
+  - name: collect static
+    command: "python manage.py collectstatic --noinput chdir={{ django_dir }}"
+   
+  become_user: "{{ askbotuser }}"
+
+- name: insert a line to hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: '{{ vm_ip }}   {{ server_name }}'
+    insertafter: .*{{ vm_name }}
+
+#change group and owner to files
+- name: change group at the portal folder to www-data
+  file: path={{ django_dir }} group=www-data
+
+- name: change group and owner to file log.file to www-data
+  file: path={{ django_dir }}/log/askbot.log owner=www-data group=www-data
+    
+#Copy configuration files
+#- name: Copying certificates directory to the remote server
+#  copy:
+#    src={{ role_path }}/files/ dest=/etc/apache2/coegss-certs
+    
+- name: Apache2 config file
+  template: src=coegss-qa.conf dest=/etc/apache2/sites-available/
+  register: askbot_config
+    
+- name: enabled headers
+  apache2_module: state=present name=headers
+
+- name: enabled wsgi
+  apache2_module: state=present name=wsgi
+
+- name: enabled rewrite
+  apache2_module: state=present name=rewrite
+
+- name: enabled ssl
+  apache2_module: state=present name=ssl
+
+- name: a2ensite askbot
+  command: a2ensite coegss-qa
+  
+- name:  disable 000-default.conf
+  command:  a2dissite 000-default  
+
+- name: Apache2 restart
+  service: name=apache2 state=restarted
+  when: askbot_config.changed
+
+

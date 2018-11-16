@@ -1,0 +1,2 @@
+#!/bin/bash
+out=$(openssl version 2>/dev/null) && echo "{\"openssl_version\":\"$out\"}" || echo "{\"openssl_version\":\"none\"}"

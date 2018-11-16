@@ -1,0 +1,20 @@
+---
+  - name: Crate VM drives
+    include_role:
+      name: _create-vmDrives
+
+  - name: define vms
+    virt: name={{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}
+          command=define  
+          xml="{{ lookup('template', 'nehalemVMxml.j2') }}"
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+
+    # # Ram map for copy and paste
+    # #  1 GB =  1048576
+    # #  2 GB =  2097152
+    # #  4 GB =  4194304
+    # #  8 GB =  8388608
+    # # 16 GB = 16777216
+    # # 32 GB = 33554432
+

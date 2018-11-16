@@ -1,0 +1,28 @@
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto {{if0}}
+iface {{if0}} inet static
+    address {{ip0}}
+    netmaks {{net0}}
+{% if gw0 is defined and gw0 %}
+    gateway {{gw0}}
+{% endif %}
+{% if dnsns0 is defined and dnsns0 %}
+    dns-nameservers {{dnsns0}}
+{% endif %}
+{% if dnssearch0 is defined and dnssearch0 %}
+    dns-search {{dnssearch0}}
+{% endif %}
+
+
+
+## additional routes
+#up route add -net 141.76.1.0/24 gw 172.18.10.1 dev eth0

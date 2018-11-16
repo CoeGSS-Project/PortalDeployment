@@ -1,0 +1,8 @@
+---
+  - hosts: CoeGSS_Support
+    vars:
+      ansible_become: True
+    roles:
+      - { role: userConfig,   users: [
+            { userName: 'rivo', sudo: True},
+          ]}

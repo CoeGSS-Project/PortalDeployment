@@ -1,0 +1,8 @@
+---
+- hosts: CoeGSS_test_vm1
+  become: True
+  roles:        
+    - { role: portal}
+    
+    
+    

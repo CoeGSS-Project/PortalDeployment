@@ -1,0 +1,13 @@
+# {{ ansible_managed }}
+
+DEVICE={{if1}}
+TYPE=Ethernet
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR={{ip1}}
+NETMASK={{net1}}
+GATEWAY={{gw1}}
+PEERDNS=yes # yes — Modify /etc/resolv.conf if the DNS directive is set.
+{% for ns in nameservers1 %}
+DNS{{loop.index}}={{ns}}
+{% endfor %}

@@ -1,0 +1,9 @@
+---
+  - name: Print a hostname
+    shell: /bin/hostname
+    changed_when: False
+    register: result
+  - debug: var=result.stdout
+  - pause:
+      prompt: "Make sure we are deploying to the right host! ----------------- PRESS ENTER IF OK! -----------------"
+

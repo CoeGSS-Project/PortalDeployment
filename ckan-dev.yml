@@ -1,0 +1,15 @@
+---
+#  - hosts: CoeGSS_ckan_dev
+  - hosts: CoeGSS_test_vm1
+    become: True
+    roles:
+      - {role: ckan-webserver,
+          tags: ['deb'],
+          www_host: "shibboleth.coegss.hlrs.de",
+          www_proto: "https",
+
+#          letsencrypt_real_cert: True,
+#          letsencrypt_email: "shcherbakov@hlrs.de",
+#          letsencrypt_LOCAL_backup_path: "~/Documents/letsencrypt/coegss/ckan.tar.gz"
+        }
+

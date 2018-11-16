@@ -1,0 +1,6 @@
+---
+#dependencies:
+#  - { role: ansible-role-nginx, nginx_disabled_sites: [ckan_ssl] , tags: [ckan_dep] }
+#  - { role: letsencrypt, tags: [ckan_dep] }
+#  - { role: ansible-role-nginx, tags: [ckan_dep] }
+#  - { role: lestsencrypt-backup, tags: [ckan_dep] }

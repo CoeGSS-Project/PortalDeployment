@@ -1,0 +1,36 @@
+---
+  - name: Adding second network interface
+    template: src=global-if.j2 dest=/etc/network/interfaces.d/global-if
+    register: globalif
+    when: 
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: Restart networking
+    shell: "systemctl restart networking.service"
+    when: 
+      - globalif.changed
+      - ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+      - restart_network_service
+
+
+  - name: Adding second network interface
+    template: src=centos_ifcfg.j2 dest="/etc/sysconfig/network-scripts/ifcfg-{{if1}}"
+    register: globalif
+    when: 
+      - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  # - name: Restart networking
+  #   shell: "systemctl restart network.service"
+  #   when: 
+  #     - globalif.changed
+  #     - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+  - name: Restart network service for interface
+    service:
+      name: network
+      state: restarted
+      args: "{{if1}}"
+    when: 
+      - globalif.changed
+      - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+      - restart_network_service

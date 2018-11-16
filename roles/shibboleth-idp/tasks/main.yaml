@@ -1,0 +1,244 @@
+---
+  - name: Update packages
+    apt:
+      update_cache: yes
+      # upgrade: dist
+  - name: Install Shibboleth-IDP dependencies
+    apt:
+      name: "{{item}}"
+      state: latest
+    with_items:
+      - ldap-utils
+      - default-jdk-headless
+      - tomcat8
+      - ca-certificates
+      - openssl
+      # - apache2
+      - ntp
+      - libmysql-java
+
+  # - name: create temporary directory
+  #   tempfile:
+  #     state: directory
+  #     suffix: IDP-dist
+  #   register: tmp_dir
+
+  - name: Download
+    get_url:
+      url: "{{shibboleth_idp_url}}"
+      # dest: "{{tmp_dir.path}}/shibboleth-identity-provider-{{shibboleth_idp_version}}.tar.gz"
+      dest: "{{shibboleth_IDP_SRC_root}}/shibboleth-identity-provider-{{shibboleth_idp_version}}.tar.gz"
+      mode: 0644
+      checksum: "{{shibboleth_idp_checksum}}"
+
+  - name: Unarchive downloaded Shibboleth-IDP
+    unarchive:
+      # src: "{{tmp_dir.path}}/shibboleth-identity-provider-{{shibboleth_idp_version}}.tar.gz"
+      src: "{{shibboleth_IDP_SRC_root}}/shibboleth-identity-provider-{{shibboleth_idp_version}}.tar.gz"
+      dest: "{{shibboleth_IDP_SRC_root}}/"
+      # dest: "{{tmp_dir.path}}/"
+      remote_src: yes
+
+  - name: find JAVA_HOME
+    shell: "echo \"$(update-alternatives --query java | grep 'Value: ' | grep -o '/.*/jre')\""
+    register: JAVA_HOME_res
+
+  - name: remember JAVA_HOME
+    set_fact:
+      JAVA_HOME: "{{JAVA_HOME_res.stdout}}"
+
+  - name: set JAVA_HOME in /etc/environment
+    lineinfile:
+      path: /etc/environment
+      regexp: '^JAVA_HOME='
+      line: 'JAVA_HOME={{JAVA_HOME}}'
+  - name: set IDP_SRC in /etc/environment
+    lineinfile:
+      path: /etc/environment
+      regexp: '^IDP_SRC='
+      line: 'IDP_SRC={{shibboleth_IDP_SRC_path}}'
+
+  - name: set JAVA_HOME for tomcat
+    lineinfile:
+      path: /etc/default/tomcat8
+      regexp: '^JAVA_HOME='
+      line: 'JAVA_HOME={{JAVA_HOME}}'
+
+  - name: set JAVA_OPTS for tomcat
+    lineinfile:
+      path: /etc/default/tomcat8
+      regexp: '^JAVA_OPTS='
+      line: 'JAVA_OPTS="-Djava.awt.headless=true -XX:+DisableExplicitGC -XX:+UseParallelOldGC -Xms256m -Xmx2g -Djava.security.egd=file:/dev/./urandom"'
+
+  - name: Create Ant properties to a file
+    template:
+      src: "ansible-idp.properties.j2"
+      # dest: "{{tmp_dir.path}}/shibboleth-identity-provider-{{shibboleth_idp_version}}/ansible-idp.properties"
+      dest: "{{shibboleth_IDP_SRC_path}}/ansible-idp.properties"
+
+  - name: install idp
+    shell: "JAVA_HOME=\"$(update-alternatives --query java | grep 'Value: ' | grep -o '/.*/jre')\" ./bin/install.sh -Didp.property.file=./ansible-idp.properties -Didp.merge.properties=./ansible-idp.properties -Didp.noprompt=True"
+    args:
+      # chdir: "{{tmp_dir.path}}/shibboleth-identity-provider-{{shibboleth_idp_version}}"
+      chdir: "{{shibboleth_IDP_SRC_path}}"
+      creates: "{{shibboleth_idp_target_dir}}/war/idp.war"
+
+  # - name: Delete temp folder
+  #   file:
+  #     path: "{{tmp_dir.path}}"
+  #     state: absent
+
+  - name: Create idp context descriptor
+    template:
+      src: "idp.context.xml.j2"
+      dest: "/var/lib/tomcat8/conf/Catalina/localhost/idp.xml"
+
+  - name: Download Java Server Tag Library
+    get_url:
+      url: "https://build.shibboleth.net/nexus/service/local/repositories/thirdparty/content/javax/servlet/jstl/1.2/jstl-1.2.jar"
+      dest: "{{shibboleth_idp_target_dir}}/edit-webapp/WEB-INF/lib/"
+
+
+  - name: set folder permissions
+    file:
+      path: "{{item}}"
+      owner: tomcat8
+      recurse: True
+    with_items:
+      - "{{shibboleth_idp_target_dir}}/logs/"
+      - "{{shibboleth_idp_target_dir}}/metadata/"
+      - "{{shibboleth_idp_target_dir}}/credentials/"
+      - "{{shibboleth_idp_target_dir}}/conf/"
+
+  - name: update tomcat settings
+    template:
+      src: "server.xml.j2"
+      dest: "/etc/tomcat8/server.xml"
+
+  # - name: create apache site
+  #   template:
+  #     src: "site-idp.conf.j2"
+  #     dest: "/etc/apache2/sites-available/idp.conf"
+
+  # - name: enable modules and default ssl site
+  #   shell: "a2enmod ssl headers && a2ensite default-ssl.conf && a2dissite 000-default.conf && service apache2 restart"
+
+  # - name: enable site
+  #   shell: "a2enmod proxy_ajp && a2ensite idp.conf && service apache2 restart && service tomcat8 restart"
+
+  - name: Find out the JARs that can be skipped from the scanning
+    shell: ls webapp/WEB-INF/lib | awk '{print $1",\\"}'
+    args:
+      chdir: "{{shibboleth_idp_target_dir}}"
+    register: find_jars_res
+
+  - name: Save a list of found JARs
+    set_fact:
+      shib_jars: "{{find_jars_res.stdout}}"
+
+  - name: update Catalina settings
+    template:
+      src: "catalina.properties.j2"
+      dest: "/etc/tomcat8/catalina.properties"
+
+  - name: update context_xml
+    template:
+      src: "context.xml.j2"
+      dest: "/etc/tomcat8/context.xml"
+
+  - name: restart tomcat 
+    service:
+      name: tomcat8
+      state: restarted
+
+  - name: Install MySQL Connector Java and Tomcat JDBC libraries
+    file:
+      src: "{{item.src}}"
+      dest: "{{item.dest}}"
+      state: link
+    with_items:
+      - {src: "/usr/share/java/mysql-connector-java.jar", dest: "{{shibboleth_idp_target_dir}}/edit-webapp/WEB-INF/lib/mysql-connector-java.jar"}
+      - {src: "/usr/share/java/mysql-connector-java.jar", dest: "/usr/share/tomcat8/lib/mysql-connector-java.jar"}
+      - {src: "/usr/share/tomcat8/lib/tomcat-jdbc.jar", dest: "{{shibboleth_idp_target_dir}}/edit-webapp/WEB-INF/lib/tomcat-jdbc.jar"}
+
+  - name: Download the libraries Common DBCP2
+    get_url:
+      url: "{{DBCP2_url}}"
+      dest: "{{DBCP2_SRC_root}}"
+      checksum: "{{DBCP2_checksum}}"
+
+  - name: Unarchive downloaded Common DBCP2
+    unarchive:
+      src: "{{DBCP2_SRC_root}}/commons-dbcp2-{{DBCP2_version}}-bin.tar.gz"
+      dest: "{{DBCP2_SRC_root}}/"
+      remote_src: yes
+
+  - name: Install the libraries Common DBCP2
+    file:
+      src: "{{item.src}}"
+      dest: "{{item.dest}}"
+      state: link
+    with_items:
+      - {src: "{{DBCP2_SRC_path}}/commons-dbcp2-{{DBCP2_version}}.jar", dest: "{{shibboleth_idp_target_dir}}/edit-webapp/WEB-INF/lib/commons-dbcp2-{{DBCP2_version}}.jar"}
+
+
+  - name: Download the libraries Common Pool
+    get_url:
+      url: "{{CommonPool_url}}"
+      dest: "{{CommonPool_SRC_root}}"
+      checksum: "{{CommonPool_checksum}}"
+
+  - name: Unarchive downloaded Common Pool
+    unarchive:
+      src: "{{CommonPool_SRC_root}}/commons-pool2-{{CommonPool_version}}-bin.tar.gz"
+      dest: "{{CommonPool_SRC_root}}/"
+      remote_src: yes
+
+  - name: Install the libraries Common CommonPool
+    file:
+      src: "{{item.src}}"
+      dest: "{{item.dest}}"
+      state: link
+    with_items:
+      - {src: "{{CommonPool_SRC_path}}/commons-pool2-{{CommonPool_version}}.jar", dest: "{{shibboleth_idp_target_dir}}/edit-webapp/WEB-INF/lib/commons-pool2-{{CommonPool_version}}.jar"}
+
+  - name: Rebuild the idp.war
+    # shell: "JAVA_HOME=\"$(update-alternatives --query java | grep 'Value: ' | grep -o '/.*/jre')\" ./bin/install.sh -Didp.property.file=./ansible-idp.properties -Didp.merge.properties=./ansible-idp.properties -Didp.noprompt=True"
+    shell: ./bin/build.sh
+    args:
+      chdir: "{{shibboleth_idp_target_dir}}"
+      # creates: "{{shibboleth_idp_target_dir}}/war/idp.war"
+
+
+# export JAVA_HOME="$(update-alternatives --query java | grep 'Value: ' | grep -o '/.*/jre')"
+
+## Continue with 
+## 6. Create and prepare the "shibboleth" MySQL DB
+
+  - name: Upload IDP DB Dump
+    template:
+      src: "shibboleth-db.sql.j2"
+      dest: "~/shibboleth-db.sql"
+      mode: "0400"
+
+  - name: Create IDP DB from dump
+    mysql_db:
+      name: shibboleth
+      state: import
+      target: ~/shibboleth-db.sql
+
+## Delete tmp file??
+
+  - name: 
+    lineinfile:
+      path: "/opt/shibboleth-idp/conf/saml-nameid.properties"
+      regexp: "^{{item.key}} "
+      line: "{{item.key}} = {{item.value}}"
+    with_items:
+      - {key: "idp.persistentId.sourceAttribute", value: "uid"}
+      - {key: "idp.persistentId.generator", value: "shibboleth.StoredPersistentIdGenerator"}
+      - {key: "idp.persistentId.dataSource", value: "MyDataSource"}
+      - {key: "idp.persistentId.computed", value: "shibboleth.ComputedPersistentIdGenerator"}
+      - {key: "idp.persistentId.salt = ", value: "{{shibbloeth_idp_persID_salt}}"}
+      
+

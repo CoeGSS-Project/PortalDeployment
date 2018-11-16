@@ -1,0 +1,8 @@
+---
+  - hosts: coegss
+    become: False
+    roles:
+      - put_custom_facts
+    # tasks:
+    #   - debug: var=hostvars['CoeGSS_REPO']['ansible_local']
+

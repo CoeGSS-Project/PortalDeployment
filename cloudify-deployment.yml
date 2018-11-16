@@ -1,0 +1,10 @@
+---  
+- hosts: CoeGSS_Cloudify2
+  become: True
+  roles:        
+    - { role: cloudify}
+    
+#- hosts: CoeGSS_test_vm2
+#  become: True
+#  roles:        
+#    - { role: cloudify}    

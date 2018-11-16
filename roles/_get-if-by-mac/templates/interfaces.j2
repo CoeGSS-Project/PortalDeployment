@@ -1,0 +1,18 @@
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+auto {{if0}}
+iface {{if0}} inet static
+    address {{ip0}}
+    netmaks {{net0}}
+#    gateway 172.18.10.1
+
+## additional routes
+#up route add -net 141.76.1.0/24 gw 172.18.10.1 dev eth0

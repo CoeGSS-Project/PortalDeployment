@@ -1,0 +1,36 @@
+---
+  - name: Crate VM drive image
+    shell: "qemu-img create -f qcow2 -o backing_file={{VMs_base_images}}/{{item.baseImage}} {{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}.img"
+    args:
+      chdir: "{{VMs_images}}"
+      creates: "{{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}.img"
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+
+  - name: Crate VM Data disk
+    shell: "sudo qemu-img create -f qcow2 {{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}-data.img {{VMs_data_image_size}}"
+    args:
+      chdir: "{{VMs_images}}"
+      creates: "{{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}-data.img"
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+
+  - name: setup VM drive image permissions
+    file:
+      path: "{{VMs_images}}/{{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}.img"
+      state: file
+      owner: "{{VMS_image_owner}}"
+      group: "{{VMS_image_group}}"
+      mode: 0660
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+
+  - name: setup VM Data disk permissions
+    file:
+      path: "{{VMs_images}}/{{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}-data.img"
+      state: file
+      owner: "{{VMS_image_owner}}"
+      group: "{{VMS_image_group}}"
+      mode: 0660
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"

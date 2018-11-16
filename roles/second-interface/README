@@ -1,0 +1,38 @@
+Dieser Ordner enthält eine Strukturvorlage für Ansible Rollen.
+.
+├── defaults
+│   └── main.yaml   In diese Datei sollten Default-Werte für Variablen definiert werden.
+├── files           In diesem Ordner werden Dateien gespeichert, die unverändert in dieser
+│                   Rolle verwendet werden.
+├── handlers
+│   └── main.yaml   In dieser Datei werden die von der Rolle verwendeten Handler definiert.
+├── meta
+│   └── main.yaml   Hier können Abhängigkeiten von Rollen definiert werden.
+├── README          In dieser Datei sollten Zweck und benötigte Variablen sowie Einschränkungen
+│                   sowie Lizenz und Historie der Rolle vermerkt werden.
+├── tasks
+│   └── main.yaml   Hier werden die unterschiedlichen Task definiert, in denen die Magie passiert.
+├── templates       In diesem Ordner werden Templates hinterlegt, die durch Tasks mit Werten befüllt
+│                   werden. Templates enden mit .j2
+└── vars
+    └── main.yaml   Hier werden die Variablenwerte definiert, die von der Rolle verwendet werden.
+
+
+Zweck:
+TODO
+
+
+Verwendete Variablen:
+TODO
+
+
+Einschränkungen:
+TODO
+
+
+Historie:
+TODO
+
+
+2016-07-05 Uwe [Sauter|Schilling], HLRS
+

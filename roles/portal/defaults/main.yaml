@@ -1,0 +1,33 @@
+---
+#Postgres vars
+postgresql_pgtune: false
+postgresql_encoding: 'UTF-8'
+postgresql_locale_parts:
+  - 'en_US' # Locale
+  - 'UTF-8' # Encoding
+postgresql_locale: "{{ postgresql_locale_parts | join('.') }}"
+postgresql_admin_user: "postgres"
+
+dbname: coegss_portal
+dbuser: portal
+dbpassword: 'Th87&x*a52@'  
+
+#portal variables
+gituser: coegss-deploy
+gitpassword: coegss-deploy #need to be 
+portaluser: portal
+repo: coegss-dev
+repo_url: 'https://{{ gituser | urlencode }}:{{ gitpassword | urlencode }}@scm.projects.hlrs.de/git/{{ repo | urlencode }}'    
+home_dir: /home/{{portaluser}}
+repo_dir: "{{ home_dir }}/{{ repo }}"
+django_project: coegss_portal
+django_dir: '{{ home_dir }}/{{ django_project }}'
+virtualenv_path: '{{ home_dir }}/.virtualenvs/portal'
+
+
+#server variables
+vm_ip: '172.18.10.54'
+server_name: 'portal.coegss.hlrs.de'
+vm_name: 'packer-ubuntu-16'
+
+

@@ -1,0 +1,27 @@
+---
+  shibboleth_idp_version: "3.3.2"
+  shibboleth_idp_url: "https://shibboleth.net/downloads/identity-provider/3.3.2/shibboleth-identity-provider-{{shibboleth_idp_version}}.tar.gz"
+  shibboleth_idp_checksum: "sha256:ed9fbefd273199d2841d4045b2661671c53825ed3c7d52d38bfe516b39d5fc64"
+  shibboleth_idp_hostname: "idp.coegss.hlrs.de"
+  shibboleth_idp_keystore_pass: "CoeIDPTESTGSS1"
+  shibboleth_idp_sealer_pass: "CoeIDPTESTGSS2"
+  shibboleth_idp_target_dir: "/opt/shibboleth-idp"
+  shibboleth_idp_entityid: "https://{{shibboleth_idp_hostname}}/idp/shibboleth"
+  shibboleth_idp_scope: "coegss.hlrs.de"
+  shibboleth_IDP_SRC_root: "/usr/local/src"
+  shibboleth_IDP_SRC_path: "{{shibboleth_IDP_SRC_root}}/shibboleth-identity-provider-{{shibboleth_idp_version}}"
+  DBCP2_version: "2.2.0"
+  DBCP2_checksum: "md5:18779766bf69968a0b23598b2c719d0f"
+  DBCP2_url: "http://www-us.apache.org/dist//commons/dbcp/binaries/commons-dbcp2-{{DBCP2_version}}-bin.tar.gz"
+  DBCP2_SRC_root: "{{shibboleth_IDP_SRC_root}}"
+  DBCP2_SRC_path: "{{DBCP2_SRC_root}}/commons-dbcp2-{{DBCP2_version}}"
+
+  CommonPool_version: "2.5.0"
+  CommonPool_checksum: "md5:23127bc7a802ce927e7920d9c4f7a34f"
+  CommonPool_url: "http://www-us.apache.org/dist//commons/pool/binaries/commons-pool2-{{CommonPool_version}}-bin.tar.gz"
+  CommonPool_SRC_root: "{{shibboleth_IDP_SRC_root}}"
+  CommonPool_SRC_path: "{{CommonPool_SRC_root}}/commons-pool2-{{CommonPool_version}}"
+
+  shibboleth_idp_db_user: shib
+  shibboleth_idp_db_pass: "CoeIDPTESTGSS_DB_Pass"
+  shibbloeth_idp_persID_salt: "PqTI/GvDp2xXcptRqS8rvqu8AHz6W/xoII72iZapf7/P0z1+" # openssl rand -base64 36

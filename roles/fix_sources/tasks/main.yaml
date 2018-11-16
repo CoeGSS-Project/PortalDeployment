@@ -1,0 +1,9 @@
+---
+- apt_repository:
+    repo: "deb http://ftp.uni-stuttgart.de/ubuntu/ {{item}} main restricted universe multiverse"
+    state: present
+  with_items:
+    - xenial
+    - xenial-updates
+    - xenial-security
+    - xenial-backports

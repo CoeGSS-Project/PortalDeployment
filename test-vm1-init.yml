@@ -1,0 +1,20 @@
+---
+  - hosts: services
+    roles:
+      - registerNewVMs
+  - hosts: CoeGSS-xenial-test-vm1
+    roles:
+      - _get-if-by-mac
+      - upload_public_key
+      # - { role: second-interface, if1: "{{br1_if_dev}}", ip1: "", gw1: ""}
+      - { role: replace-main-ip, if0: "{{br0_if_dev}}", ip0: "172.18.10.54", gw0: "172.18.10.1", dnsns0: "129.69.252.232 129.69.252.252 172.18.2.2", dnssearch0: "opennebula.hlrs.de"}
+      - fix_sources
+      - nagios
+      - { role: userConfig,   users: [
+            { userName: 'hpcoshch', sudo: True},
+            { userName: 'michael', sudo: True},
+            { userName: 'burak', sudo: True},
+            { userName: 'yosandra', sudo: True} 
+          ]}
+
+

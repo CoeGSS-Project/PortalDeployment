@@ -1,0 +1,34 @@
+---
+- name: Create www_dir
+  file:
+    dest: "{{www_root}}"
+    state: directory
+
+# ======= letsencrypt =======
+
+- name: Upgrade system
+  apt: upgrade=dist update_cache=yes
+
+- name: install letsencrypt
+  apt: name=letsencrypt state=latest
+
+- name: Create letsencrypt certificate
+  shell: "letsencrypt certonly {% if not letsencrypt_real_cert %}--staging {%endif%}-n --webroot -w {{ www_root }} -m {{ letsencrypt_email }} --agree-tos -d {{ www_host }}"
+  args:
+    creates: "/etc/letsencrypt/live/{{ www_host }}"
+
+- name: Generate dhparams
+  shell: openssl dhparam -out /etc/nginx/dhparams.pem 2048
+  args:
+    creates: /etc/nginx/dhparams.pem
+
+- name: Reload nginx to activate specified site
+  service: name=nginx state=restarted
+
+- name: Add letsencrypt cronjob for cert renewal
+  cron:
+    name: letsencrypt_renewal
+    special_time: weekly
+    job: "letsencrypt --renew certonly {% if not letsencrypt_real_cert %}--staging {%endif%}-n --webroot -w {{ www_root }} -m {{ letsencrypt_email }} --agree-tos -d {{ www_host }} && service nginx reload"
+
+# ======= endof letsencrypt =======

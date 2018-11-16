@@ -1,0 +1,136 @@
+---
+- name: Include encrypted vars
+  include_vars: vault.yaml
+- name: Create www_dir
+  file:
+    dest: "{{www_root}}"
+    state: directory
+
+# ======= letsencrypt =======
+
+# - name: Upgrade system
+#   apt: upgrade=dist update_cache=yes
+
+# - name: install letsencrypt
+#   apt: name=letsencrypt state=latest
+
+# - name: Create letsencrypt certificate
+#   shell: "letsencrypt certonly {% if not letsencrypt_real_cert %}--staging {%endif%}-n --webroot -w {{ www_root }} -m {{ letsencrypt_email }} --agree-tos -d {{ www_host }}"
+#   args:
+#     creates: "/etc/letsencrypt/live/{{ www_host }}"
+
+# - name: Generate dhparams
+#   shell: openssl dhparam -out /etc/nginx/dhparams.pem 2048
+#   args:
+#     creates: /etc/nginx/dhparams.pem
+
+# - name: Reload nginx to activate specified site
+#   service: name=nginx state=restarted
+
+# - name: Add letsencrypt cronjob for cert renewal
+#   cron:
+#     name: letsencrypt_renewal
+#     special_time: weekly
+#     job: "letsencrypt --renew certonly {% if not letsencrypt_real_cert %}--staging {%endif%}-n --webroot -w {{ www_root }} -m {{ letsencrypt_email }} --agree-tos -d {{ www_host }} && service nginx reload"
+
+# ======= endof letsencrypt =======
+
+
+- name: Install git
+  apt:
+    name: git
+    state: present
+
+- name: Ensure .well-known folder is absent in www_root
+  file:
+    path: "{{www_root}}/.well-known"
+    state: absent
+
+- name: Checkout moodle
+  git:
+    repo: https://github.com/moodle/moodle.git
+    dest: "{{www_root}}"
+    version: "MOODLE_{{moodle_git_version}}_STABLE"
+- name: Create database for Moodle
+  mysql_db:
+    name: "{{moodle_db_name}}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+
+- name: Create db user
+  mysql_user:
+    name: "{{moodle_db_user}}"
+    password: "{{moodle_db_pass}}"
+    priv: "{{moodle_db_name}}.*:SELECT,INSERT,UPDATE,DELETE,CREATE,CREATE TEMPORARY TABLES,DROP,INDEX,ALTER"
+    host: localhost
+
+- name: Create data_dir
+  file:
+    dest: "{{moodle_data_dir}}"
+    state: directory
+    owner: "{{php_fpm_pool_user}}"
+
+- name: Create config.php
+  template:
+    src: moodle-config.php.j2
+    dest: "{{www_root}}/config.php"
+    
+- name: Create php-fpm error log file
+  file:
+    dest: /var/log/php7.0-fpm.log
+    state: file
+    owner: "{{php_fpm_pool_user}}"
+
+- name: Create moodle cron job
+  cron:
+    name: Moodle cron job
+    user: "{{webserver_user}}"
+    job: "/usr/bin/php {{www_root}}/admin/cli/cron.php >/dev/null"
+
+# - name: Instal moodle defaults (LDAP)
+#   template:
+#     src: local-defaults.php.j2
+#     dest: "{{www_root}}/local/defaults.php"
+
+
+- name: Install Moodle
+  shell: "sudo -u {{php_fpm_pool_user}} /usr/bin/php ./admin/cli/install_database.php --lang='{{moodle_site_lang}}' --adminuser='{{moodle_admin}}' --adminpass='{{moodle_admin_pass}}' --adminemail='{{moodle_admin_email}}' --fullname='{{moodle_site_fullname}}' --shortname='{{moodle_site_shortname}}' --agree-license"
+  args:
+    chdir: "{{www_root}}"
+  # become: true
+  # become_user: "{{php_fpm_pool_user}}"
+  ignore_errors: yes
+
+- name: Copy LDAP settings dump
+  template:
+    src: auth-ldap-plugin.sql.j2
+    dest: "{{ansible_env.HOME}}/auth-ldap-plugin.sql"
+
+- name: Setup LDAP setings in the db
+  mysql_db:
+    name: "{{moodle_db_name}}"
+    state: import
+    target: "{{ansible_env.HOME}}/auth-ldap-plugin.sql"
+
+- name: Purge Moodle cache
+  shell: "sudo -u {{php_fpm_pool_user}} /usr/bin/php ./admin/cli/purge_caches.php"
+  args:
+    chdir: "{{www_root}}"
+  # become: true
+  # become_user: "{{php_fpm_pool_user}}"
+  ignore_errors: yes
+
+- name: Remove LDAP settings file
+  file:
+    dest: "{{ansible_env.HOME}}/auth-ldap-plugin.sql"
+    state: absent
+
+-  debug: msg="trigger restart php-fpm"
+   notify: restart php-fpm
+   changed_when: true
+
+# - name: Place test file to www directory
+#   template:
+#     src: pinfo.php.j2
+#     dest: "{{www_root}}/pinfo.php"
+#     owner: www-data

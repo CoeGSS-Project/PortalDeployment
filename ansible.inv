@@ -1,0 +1,51 @@
+# In dieser Datei werden Hosts und Gruppen definiert
+
+[local]
+localhost	ansible_become=False
+
+[coegss]
+services					ansible_host=172.18.2.4
+
+CoeGSS_Infrastucture		ansible_host=172.18.10.30
+CoeGSS_Jenkins				ansible_host=172.18.10.40
+CoeGSS_LDAP					ansible_host=172.18.10.41
+CoeGSS_Moodle				ansible_host=172.18.10.42
+CoeGSS_Portal				ansible_host=172.18.10.43
+CoeGSS_REPO					ansible_host=172.18.10.44
+CoeGSS_WebDAV				ansible_host=172.18.10.45
+CoeGSS_Support				ansible_host=172.18.10.45
+CoeGSS_Askbot				ansible_host=172.18.10.45
+CoeGSS_ShibbolethIDP		ansible_host=172.18.10.50
+CoeGSS_Shibboleth			ansible_host=172.18.10.51
+CoeGSS_IDM					ansible_host=172.18.10.52
+CoeGSS_Cloudify				ansible_host=172.18.10.53
+CoeGSS_Cloudify2			ansible_host=172.18.10.60
+CoeGSS_test_vm1				ansible_host=172.18.10.54
+CoeGSS_test_vm2				ansible_host=172.18.10.61
+CoeGSS_moodle_dev			ansible_host=172.18.10.55
+CoeGSS_ckan_dev				ansible_host=172.18.10.55
+
+
+
+[coegss:vars]
+ansible_ssh_common_args='-o "ProxyCommand ssh -W %h:%p gateway.opennebula.hlrs.de"'
+# ansible_ssh_common_args='-o "ProxyCommand ssh -W %h:%p hpcoshch@gateway.opennebula.hlrs.de" -o "StrictHostKeyChecking no"'
+
+[coegss-gw]
+gw	 ansible_host=gateway.opennebula.hlrs.de
+
+
+[vms]
+moodle	ansible_user=hpcadmin ansible_host=172.18.3.251
+idp		ansible_user=hpcadmin ansible_host=172.18.10.50
+
+[vms:vars]
+ansible_python_interpreter=/usr/bin/python3
+###ansible_ssh_extra_args='-o "ProxyCommand ssh -W %h:%p hpcoshch@gateway.opennebula.hlrs.de"'
+ansible_ssh_common_args='-o "ProxyCommand ssh -W %h:%p gateway.opennebula.hlrs.de"'
+
+[dynvms]
+
+[dynvms:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_common_args='-o "ProxyCommand ssh -W %h:%p gateway.opennebula.hlrs.de" -o "StrictHostKeyChecking no" -o "UserKnownHostsFile ~/.ssh/coegss_dynvms_known_hosts" -o "HashKnownHosts No"'

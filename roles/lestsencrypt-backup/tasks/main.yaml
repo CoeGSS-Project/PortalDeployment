@@ -1,0 +1,75 @@
+---
+# ======= letsencrypt backup =======
+
+- name: Trying local file
+  stat:
+    path: "{{letsencrypt_LOCAL_backup_path}}" 
+    follow: true
+  register: le_backup
+  become: False
+  delegate_to: localhost
+- debug: var=le_backup.stat.exists
+- debug: var=le_backup.stat.mtime
+
+- name: Trying remote cert
+  stat: 
+    path: /etc/letsencrypt/live/{{www_host}}/cert.pem
+    follow: true
+  register: le_remote_cert
+  become: True
+# - debug: var=le_remote_cert.stat.exists
+# - debug: var=le_remote_cert.stat.mtime
+
+
+- name: Setting logical vars
+  set_fact:
+    upload_certs: false
+    download_certs: false
+    fetch_new_certs: false
+
+- name: Setting logical vars
+  set_fact:
+    upload_certs: true
+  when: le_backup.stat.exists and not le_remote_cert.stat.exists
+
+# - debug: var=upload_certs
+
+- name: Setting logical vars
+  set_fact:
+    download_certs: true
+  when: (not le_backup.stat.exists and le_remote_cert.stat.exists) or (le_backup.stat.exists and le_remote_cert.stat.exists and le_remote_cert.stat.mtime > le_backup.stat.mtime)
+
+# - debug: var=download_certs
+
+- name: Compress a remote backup copy
+  archive:
+    path: /etc/letsencrypt
+    dest: /etc/letsencrypt.tgz
+    owner: root
+    mode: 0600
+  become: true
+  when: download_certs
+
+- name: Download remote backup
+  fetch:
+    src: /etc/letsencrypt.tgz
+    dest: "{{letsencrypt_LOCAL_backup_path}}"
+    flat: yes
+  become: true
+  when: download_certs
+
+- name: Delte remote archive
+  file:
+    path: /etc/letsencrypt.tgz
+    state: absent
+  become: true
+  when: download_certs
+
+- name: Upload and extract backup
+  unarchive:
+    src: "{{letsencrypt_LOCAL_backup_path}}"
+    dest: /etc
+  become: true
+  when: upload_certs
+
+# ======= endof letsencrypt backup =======

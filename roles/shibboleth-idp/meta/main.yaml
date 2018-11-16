@@ -1,0 +1,7 @@
+---
+dependencies:
+  - { role: ansible-role-nginx, nginx_disabled_sites: [idp_ssl]  }
+  - { role: letsencrypt }
+  - { role: ansible-role-nginx }
+  - { role: lestsencrypt-backup }
+  - { role: mysql }

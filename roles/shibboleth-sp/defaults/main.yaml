@@ -1,0 +1,3 @@
+---
+nginx_version_tag: 1.12.1
+webserver_group: "www-data"

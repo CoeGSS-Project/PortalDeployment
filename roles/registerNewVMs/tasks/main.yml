@@ -1,0 +1,16 @@
+---
+  - name: init hostvars with vms
+    add_host: 
+      name: "{{VMS_image_prefix}}-{{item.baseOS}}-{{item.vmname}}"
+      ansible_user: "{{item.defaultUser}}"
+      groups: "dynvms"
+    when: item.host == ansible_hostname
+    with_items: "{{vms}}"
+
+  - name: Fill ARP cache
+    shell: "nmap -sP {{VMs_dhcp_pool}} >/dev/null"
+    tags:
+      - nmap
+
+  - include: add_vm.yml vm={{item}}
+    with_items: "{{vms}}"

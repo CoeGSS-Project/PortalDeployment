@@ -1,0 +1,8 @@
+---
+  users: 
+    - { userName: 'hpcoshch', sudo: True}
+    - { userName: 'michael', sudo: True}
+    - { userName: 'burak', sudo: True}
+    - { userName: 'yosandra', sudo: True}
+    - { userName: 'sergiy', sudo: True}
+

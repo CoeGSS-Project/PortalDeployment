@@ -1,0 +1,13 @@
+---
+ansible_become: True
+
+# Global network, static
+if1:  "ens11"
+ip1:  "141.58.0.69"
+net1: "255.255.255.0"
+gw1:  "141.58.0.254"
+nameservers1:
+  - "129.69.252.232"
+  - "129.69.252.202"
+
+restart_network_service: True

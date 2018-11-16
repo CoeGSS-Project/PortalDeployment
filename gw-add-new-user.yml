@@ -1,0 +1,8 @@
+---
+  - hosts: gw
+    roles:
+      - { role: userConfig,   users: [
+            { userName: 'yosandra', sudo: False} 
+          ]}
+
+
